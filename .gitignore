@@ -1,0 +1,23 @@
+# R / RStudio
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+.Renviron
+
+# VS Code
+.vscode/
+
+# Local working files (do not upload)
+local/
+
+# Knitr/Rmd caches (avoid committing heavy cache folders)
+*_cache/
+cache/
+
+# OS artifacts
+.DS_Store
+Thumbs.db.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
