@@ -134,7 +134,7 @@ Huge thanks to the USEPA and Cornerstone teams and contributors whose work power
 - Supply Chain Emission Factors: https://github.com/USEPA/supply-chain-factors
 - FLOWSA: https://github.com/USEPA/flowsa
 
-Project by Damien Lieber @ DecarbNexus LLC.
+Project by Damien Lieber @ [DecarbNexus LLC](https://decarbnexus.com).
 
 ## Pair this with GHG source disaggregation
 
