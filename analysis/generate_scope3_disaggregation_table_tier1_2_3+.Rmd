@@ -410,8 +410,8 @@ author_info <- data.frame(
     "DecarbNexus LLC",
     "decarbnexus.com",
     "contact@decarbnexus.com",
-    "https://github.com/damienlieber-dnexus/useeio_disaggregation_allocation_factors",
-    "https://github.com/damienlieber-dnexus/useeio_disaggregation_allocation_factors/discussions"
+    "https://github.com/damienlieber-dnexus/useeio_sectors_disaggregation",
+    "https://github.com/damienlieber-dnexus/useeio_sectors_disaggregation/discussions"
   ),
   stringsAsFactors = FALSE
 )
