@@ -130,3 +130,16 @@ Huge thanks to the USEPA and Cornerstone teams and contributors whose work power
 - FLOWSA: https://github.com/USEPA/flowsa
 
 Project by Damien Lieber @ DecarbNexus LLC.
+
+## Pair this with GHG source disaggregation
+
+This project focuses on disaggregating Scope 3 emissions by USEEIO sectors (and tiers). You’ll soon be able to combine it with a companion workflow that disaggregates each sector’s emissions into their underlying greenhouse gas sources:
+
+- Upcoming repository: https://github.com/damienlieber-dnexus/useeio_ghg_sources_disaggregation (target publication by Thanksgiving 2025)
+- Data foundation: It leverages USEPA’s FLOWSA (https://github.com/USEPA/flowsa), which is also a core data source for USEEIO. Pairing the two lets you go from “which sectors and tiers?” to “which GHG sources within those sectors?”
+
+This completes our disaggregation workflow, using USEEIO data, as illustrated below.
+![Scope 3 sector-and-source sunburst](docs/images/scope3_disaggregation_example.png)
+
+When used together, you can produce visuals like the sunburst below, which organize Scope 3 in the intuitive language of Scope 1 & 2 - by sector and source.
+![Scope 3 sector-and-source sunburst](docs/images/scope3_sunburst_example.png)
