@@ -33,3 +33,4 @@ select,button,input{padding:.35rem .5rem;border:1px solid var(--border);border-r
 button{background:var(--btn);color:var(--btn-text);border-color:var(--border)}
 button:hover{filter:brightness(1.1)}
 code{color:var(--accent)}
+footer{max-width:1100px;margin:1rem auto 0; text-align:center; color:var(--muted)}
