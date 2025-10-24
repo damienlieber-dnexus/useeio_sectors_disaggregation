@@ -12,8 +12,8 @@ The main output is an Excel workbook and a CSV with absolute and relative contri
 ### Interactive visual
 
 - Try the interactive sunburst built from the CSV in this repo: https://damienlieber-dnexus.github.io/useeio_sectors_disaggregation/
+  - Note: On first setup, GitHub Pages can take 1–2 minutes after a push to publish. If you see a 404 ("There isn't a GitHub Pages site here."), wait a minute and refresh.
 - It lets you pick a commodity and explores Scope (1/2) → Tier (1/2/3+) → Sector codes as a sunburst using Relative_Contribution values.
-- First load may take a few seconds (the CSV is ~18MB). We may optimize with a pre-aggregated JSON later.
 
 ### Data tables
 
