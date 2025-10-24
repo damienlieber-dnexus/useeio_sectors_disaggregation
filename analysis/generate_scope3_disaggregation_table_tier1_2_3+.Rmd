@@ -274,16 +274,27 @@ Now we process the matrix results into the final tables and export them to a mul
 ```{r 05-reshape-and-export, echo=TRUE}
 # --- 1. Helper Function to Reshape Matrices ---
 melt_and_label <- function(matrix, tier_label, scope_label) {
-  df <- as.data.frame(matrix)
-  df$Embedded_Sector_Code <- rownames(df)
+  # Melt the matrix to long format with explicit row/col identifiers
+  # Rows = GHG source sectors, Cols = embedded sector/commodity
   df_long <- reshape2::melt(
-    df,
-    id.vars = "Embedded_Sector_Code",
-    variable.name = "Disaggregated_Commodity",
+    matrix,
+    varnames = c("Embedded_Sector_Code_for_GHG_sources", "Disaggregated_Commodity"),
     value.name = "Absolute_Contribution_GHG"
   )
+
+  # Assign displayed Embedded_Sector_Code per requirement:
+  # - Scope 1: show under the emitting (source) sector
+  # - Scope 2: show under the embedded sector (i.e., the commodity's own sector),
+  #            while preserving the electricity (or other source) in _for_GHG_sources
+  if (scope_label == "Scope 2") {
+    df_long$Embedded_Sector_Code <- df_long$Disaggregated_Commodity
+  } else {
+    df_long$Embedded_Sector_Code <- df_long$Embedded_Sector_Code_for_GHG_sources
+  }
+
   df_long$Tier <- tier_label
   df_long$Scope <- scope_label
+
   # Keep only non-zero entries to reduce file size and improve readability
   df_long <- df_long[df_long$Absolute_Contribution_GHG != 0, ]
   return(df_long)
@@ -293,7 +304,40 @@ melt_and_label <- function(matrix, tier_label, scope_label) {
 df_t1_s1 <- melt_and_label(N_Tier1_scope1, "Tier 1", "Scope 1")
 df_t1_s2 <- melt_and_label(N_Tier1_scope2, "Tier 1", "Scope 2")
 df_t2_s1 <- melt_and_label(N_Tier2_scope1, "Tier 2", "Scope 1")
-df_t2_s2 <- melt_and_label(N_Tier2_scope2, "Tier 2", "Scope 2")
+
+# Decompose Tier 2 Scope 2 by intermediate supplier (j) while preserving electricity source (i)
+# M1 = D * A_scope2 gives i->j contributions; then distribute to k via A[j,k]
+M1 <- D_matrix %*% A_matrix_scope2
+
+df_scope2_step1 <- reshape2::melt(
+  M1,
+  varnames = c("Embedded_Sector_Code_for_GHG_sources", "Embedded_Sector_Code"),
+  value.name = "v1"
+) %>%
+  dplyr::filter(v1 != 0)
+
+df_A_jk <- reshape2::melt(
+  A_matrix,
+  varnames = c("Embedded_Sector_Code", "Disaggregated_Commodity"),
+  value.name = "a_jk"
+) %>%
+  dplyr::filter(a_jk != 0)
+
+df_t2_s2 <- df_scope2_step1 %>%
+  dplyr::inner_join(df_A_jk, by = "Embedded_Sector_Code") %>%
+  dplyr::mutate(
+    Absolute_Contribution_GHG = v1 * a_jk,
+    Tier = "Tier 2",
+    Scope = "Scope 2"
+  ) %>%
+  dplyr::select(
+    Disaggregated_Commodity,
+    Embedded_Sector_Code,
+    Embedded_Sector_Code_for_GHG_sources,
+    Tier, Scope,
+    Absolute_Contribution_GHG
+  ) %>%
+  dplyr::filter(Absolute_Contribution_GHG != 0)
 df_t3plus_s1 <- melt_and_label(N_Tier3plus_scope1, "Tier 3+", "Scope 1")
 df_t3plus_s2 <- melt_and_label(N_Tier3plus_scope2, "Tier 3+", "Scope 2")
 
@@ -309,7 +353,8 @@ final_table_by_code <- bind_rows(
   ) %>%
   mutate(
     Disaggregated_Commodity = stringr::str_replace(Disaggregated_Commodity, "/US$", ""),
-    Embedded_Sector_Code    = stringr::str_replace(Embedded_Sector_Code, "/US$", "")
+    Embedded_Sector_Code    = stringr::str_replace(Embedded_Sector_Code, "/US$", ""),
+    Embedded_Sector_Code_for_GHG_sources = stringr::str_replace(Embedded_Sector_Code_for_GHG_sources, "/US$", "")
   ) %>%
   group_by(Disaggregated_Commodity) %>%
   mutate(
@@ -320,6 +365,7 @@ final_table_by_code <- bind_rows(
   select(
     Disaggregated_Commodity,
     Embedded_Sector_Code,
+    Embedded_Sector_Code_for_GHG_sources,
     Tier,
     Scope,
     Absolute_Contribution_GHG,
@@ -337,16 +383,28 @@ final_table_by_name <- final_table_by_code %>%
   rename(Disaggregated_Commodity_Name = Name) %>%
   left_join(industry_mapping, by = c("Embedded_Sector_Code" = "Code")) %>%
   rename(Embedded_Sector_Name = Name) %>%
+  left_join(industry_mapping, by = c("Embedded_Sector_Code_for_GHG_sources" = "Code")) %>%
+  rename(Embedded_Sector_Name_for_GHG_sources = Name) %>%
   select(
     Disaggregated_Commodity,
     Disaggregated_Commodity_Name,
     Embedded_Sector_Code,
+    Embedded_Sector_Code_for_GHG_sources,
     Embedded_Sector_Name,
+    Embedded_Sector_Name_for_GHG_sources,
     Tier,
     Scope,
     Absolute_Contribution_GHG,
     Relative_Contribution
   )
+
+# Electricity-only filtered views (by GHG source sector)
+# Use fixed code for electricity as requested
+electricity_codes <- c("221100")
+electric_only_by_code <- final_table_by_code %>%
+  dplyr::filter(Embedded_Sector_Code_for_GHG_sources %in% electricity_codes)
+electric_only_by_name <- final_table_by_name %>%
+  dplyr::filter(Embedded_Sector_Code_for_GHG_sources %in% electricity_codes)
 
 # Table with Industry Details
 sector_classification <- model$Industries %>%
@@ -392,6 +450,8 @@ file_basename <- paste(
 
 excel_filename <- file.path(outputs_dir, paste0(file_basename, ".xlsx"))
 csv_filename   <- file.path(outputs_dir, paste0(file_basename, ".csv"))
+csv_elec_filename <- file.path(outputs_dir, paste0(file_basename, "_electricity_only.csv"))
+csv_sc_filename   <- file.path(outputs_dir, "sector_classification.csv")
 
 wb <- createWorkbook()
 
@@ -429,6 +489,10 @@ addWorksheet(wb, "Contributions_by_Code")
 writeData(wb, "Contributions_by_Code", final_table_by_code %>%
   rename(!!abs_col_name := Absolute_Contribution_GHG))
 
+addWorksheet(wb, "Electricity_only")
+writeData(wb, "Electricity_only", electric_only_by_name %>%
+  rename(!!abs_col_name := Absolute_Contribution_GHG))
+
 addWorksheet(wb, "sector_classification")
 writeData(wb, "sector_classification", sector_classification)
 
@@ -441,8 +505,22 @@ saveWorkbook(wb, excel_filename, overwrite = TRUE)
 write.csv(final_table_by_code %>%
   rename(!!abs_col_name := Absolute_Contribution_GHG), csv_filename, row.names = FALSE, na = "")
 
+# Electricity-only CSV export
+write.csv(electric_only_by_code %>%
+  rename(!!abs_col_name := Absolute_Contribution_GHG), csv_elec_filename, row.names = FALSE, na = "")
+
+# Export sector classification as CSV
+write.csv(
+  sector_classification,
+  csv_sc_filename,
+  row.names = FALSE,
+  na = ""
+)
+
 cat("Saved Excel:", excel_filename, "\n")
-cat("Saved CSV:  ", csv_filename, "\n")
+cat("Saved Contributions CSVs:  ", csv_filename, "\n")
+cat("Saved Electricity-only CSV: ", csv_elec_filename, "\n")
+cat("Saved Sector Classification CSV:  ", csv_sc_filename, "\n")
 ```
 
 ## 6. Preview of Final Results

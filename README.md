@@ -9,6 +9,14 @@ The main output is an Excel workbook and a CSV with absolute and relative contri
 
 ## Just here for the data? (no coding required)
 
+### Interactive visual
+
+- Try the interactive sunburst built from the CSV in this repo: https://damienlieber-dnexus.github.io/useeio_sectors_disaggregation/
+- It lets you pick a commodity and explores Scope (1/2) → Tier (1/2/3+) → Sector codes as a sunburst using Relative_Contribution values.
+- First load may take a few seconds (the CSV is ~18MB). We may optimize with a pre-aggregated JSON later.
+
+### Data tables
+
 - Go to the `outputs/` folder and download the latest files:
   - Excel: `outputs/SEF_<version>_disaggregation_factors_GHG<year>_IO<year>.xlsx`
   - CSV:   `outputs/SEF_<version>_disaggregation_factors_GHG<year>_IO<year>.csv`
@@ -21,11 +29,13 @@ What’s inside (high level):
 - “Relative contribution” shows the percentage split across all contributing sectors for a given commodity (sums to 100%).
 - The "sector_classification" tab provides category, subcategory, and descriptions to understand each sector.
 
+### Use
+
 For context on how these contributions help translate Scope 3 inventories into actionable drivers, see the AIM Platform's article "What Is Deep Value Chain Analysis, and How Can It Scale Corporate Decarbonization Investments?": https://aimplatform.org/what-is-deep-value-chain-analysis-and-how-can-it-scale-corporate-decarbonization-investments/. This dataset helps you:
 - Identify hotspots by sector and upstream tier
 - Separate Scope 1 vs Scope 2 contributions for better prioritization
 - Connect your organization's demand and supply within the economy to specific GHG sources
-- Conduct hybrid EEIO accounting under the GHG Protocol (see Example 1.3): https://ghgprotocol.org/sites/default/files/2023-03/Scope3_Calculation_Guidance_0%5B1%5D.pdf
+- Conduct hybrid EEIO accounting under the GHG Protocol (see Example 1.3): https://ghgprotocol.org/sites/default/files/2023-03/Scope3_Calculation_Guidance_0%5B1%5D.pdf. Learn more at https://tasaanalytics.com/hybrid-path-methodology/
 
 ## Quick start (to reproduce the data)
 
@@ -88,6 +98,7 @@ Additional reading and context:
 - Deep Value Chain Analysis and scaling corporate decarbonization investments (AIM Platform): https://aimplatform.org/what-is-deep-value-chain-analysis-and-how-can-it-scale-corporate-decarbonization-investments/
 - AIM Platform Association Test (draft guidance): https://aimplatform.org/standard-development/aim-platform-association-test/
 - Hybrid EEIO accounting under the GHG Protocol (see Example 1.3): https://ghgprotocol.org/sites/default/files/2023-03/Scope3_Calculation_Guidance_0%5B1%5D.pdf
+- Hybrid Path Methodology by Tasa Analytics: https://tasaanalytics.com/hybrid-path-methodology/
 
 ## Limitations & planned development
 1) Margins are not disaggregated yet - the current datasets only apply to emission factors without margins. Make sure to only disaggregate the "SEF" portion of your emissions / emission factors. Future versions may add the disaggregation of margins.
