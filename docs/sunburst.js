@@ -32,6 +32,9 @@ const tooltip = d3.select("#tooltip");
 
 async function loadCSV() {
   const candidates = [
+    // Prefer same-origin bundle (downloaded into docs/data by GitHub Actions)
+    "data/" + DATA_FILENAME,
+    // Then Release asset, raw main, and local outputs
     RELEASE_CSV_URL,
     RAW_CSV_URL,
     "../outputs/" + DATA_FILENAME,
@@ -56,9 +59,11 @@ async function loadCSV() {
 async function tryLoadClassification() {
   // Attempt Release first, then raw main, then repo-relative path
   const candidates = [
+    // Prefer same-origin bundle
+    "data/" + CLASS_FILENAME,
+    // Then Release asset, raw main, then repo-relative fallback
     RELEASE_CLASS_URL,
     CLASS_CSV_URL,
-    // Works when opening docs/index.html via a web server or GitHub Pages
     "../outputs/" + CLASS_FILENAME,
   ];
   let lastErr;
