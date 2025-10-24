@@ -19,6 +19,7 @@ The main output is an Excel workbook and a CSV with absolute and relative contri
 - Go to the `outputs/` folder and download the latest files:
   - Excel: `outputs/SEF_<version>_disaggregation_factors_GHG<year>_IO<year>.xlsx`
   - CSV:   `outputs/SEF_<version>_disaggregation_factors_GHG<year>_IO<year>.csv`
+  - Electricity-only CSV:   `outputs/SEF_<version>_disaggregation_factors_GHG<year>_IO<year>_electricity_only.csv`
 - Open in Excel or your favorite spreadsheet tool.
 - Start with the "Contributions_by_Name" tab if you prefer industry names over codes.
 
