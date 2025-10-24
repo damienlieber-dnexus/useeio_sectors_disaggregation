@@ -21,3 +21,7 @@ Thumbs.db.Rproj.user
 .Rhistory
 .RData
 .Ruserdata
+
+# Outputs - generated artifacts (kept out of main; served via Releases)
+outputs/*
+!outputs/.gitkeep
