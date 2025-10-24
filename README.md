@@ -12,7 +12,6 @@ The main output is an Excel workbook and a CSV with absolute and relative contri
 ### Interactive visual
 
 - Try the interactive sunburst built from the CSV in this repo: https://damienlieber-dnexus.github.io/useeio_sectors_disaggregation/
-  - Note: On first setup, GitHub Pages can take 1–2 minutes after a push to publish. If you see a 404 ("There isn't a GitHub Pages site here."), wait a minute and refresh.
 - It lets you pick a commodity and explores Scope (1/2) → Tier (1/2/3+) → Sector codes as a sunburst using Relative_Contribution values.
 
 ### Data tables
@@ -101,9 +100,16 @@ Additional reading and context:
 - Hybrid Path Methodology by Tasa Analytics: https://tasaanalytics.com/hybrid-path-methodology/
 
 ## Limitations & planned development
-1) Margins are not disaggregated yet - the current datasets only apply to emission factors without margins. Make sure to only disaggregate the "SEF" portion of your emissions / emission factors. Future versions may add the disaggregation of margins.
-2) The limitations of EEIO models are well documented in e.g., Ingwersen, Wesley, Mo Li, Ben Young, Jorge Vendries, and Catherine Birney. 2022. “USEEIO V2.0, the US Environmentally-Extended Input-Output Model V2.0 (USEEIOv2.0).” Scientific Data 9: 194. https://www.nature.com/articles/s41597-022-01293-7
-3) This project's categorization of Scope 1 and Scope 2 emissions includes known differences compared to standard corporate GHG accounting protocols. For example, in corporate GHG accounting, emissions from leased assets (like real estate) are often accounted for as the lessee's (tenant's) Scope 1 and 2 emissions. In this project, these emissions are attributed to the real estate sector itself (i.e., the lessor's sector). A future version will provide an option to reallocate these emissions from the asset's sector to the scope 1 and 2 of purchasers. Another example is that Scope 2 calculation currently includes all direct emissions from the electricity sector (generation, transmission, and distribution). It does not isolate only the generation emissions associated with the electricity consumed by the end-user. This methodology may cause Scope 2 estimates to be a few percent higher than they would be under standard accounting rules. Future versions will introduce options to isolate electricity generation emissions from transmission and distribution (T&D) emissions, and estimate T&D losses using a specific factor.
+1) Margins not yet included
+  - The current datasets disaggregate only the Supply Chain Emission Factors (SEF) portion and do not split retail/wholesale/transport margins.
+  - If your emission factors include margins, apply these disaggregation shares only to the SEF component. A future release may add margin disaggregation.
+
+2) Model scope and EEIO caveats
+  - USEEIO is an aggregate, economy‑wide model with typical EEIO assumptions (e.g., industry homogeneity, proportionality, domestic technology). For methods and limitations, see Ingwersen et al. (2022): https://www.nature.com/articles/s41597-022-01293-7
+
+3) Scope 1/2 mapping differences vs corporate GHG accounting
+  - Leased assets: Corporate inventories often record the lessee’s (tenant’s) Scope 1 and 2. Here, these emissions are attributed to the asset’s sector (the lessor). Planned: an option to reassign them to purchasers’ Scope 1/2.
+  - Electricity Scope 2: We currently include direct emissions across the electricity sector (generation, transmission, distribution), not only those attributable to end‑user consumption. This can make Scope 2 a few percent higher than corporate methods. Planned: options to isolate generation‑only emissions, treat T&D separately, and apply a configurable T&D loss factor.
 
 ## Beginner setup: getting R running (no prior coding experience)
 
