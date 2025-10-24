@@ -1,7 +1,18 @@
 // USEEIO Sector Disaggregation – Interactive Sunburst
-// - Loads CSV from GitHub raw
+// - Loads CSV from GitHub Release assets (preferred) with fallbacks
 // - Lets user select a Disaggregated_Commodity
 // - Builds hierarchy: Tier -> SectorGroup (selectable) -> Scope with value = sum of Relative_Contribution
+
+// Repo / Release configuration
+const OWNER = "damienlieber-dnexus";
+const REPO = "useeio_sectors_disaggregation";
+const TAG = "v1.0";
+const DATA_FILENAME = "SEF_v1.3.0__disaggregation_factors__GHG2022_IO2017.csv";
+const CLASS_FILENAME = "sector_classification.csv";
+
+// Preferred: Release assets
+const RELEASE_CSV_URL = `https://github.com/${OWNER}/${REPO}/releases/download/${TAG}/${DATA_FILENAME}`;
+const RELEASE_CLASS_URL = `https://github.com/${OWNER}/${REPO}/releases/download/${TAG}/${CLASS_FILENAME}`;
 
 const RAW_CSV_URL =
   "https://raw.githubusercontent.com/damienlieber-dnexus/useeio_sectors_disaggregation/main/outputs/SEF_v1.3.0__disaggregation_factors__GHG2022_IO2017.csv";
@@ -20,17 +31,35 @@ const formatNum = d3.format(",.4f");
 const tooltip = d3.select("#tooltip");
 
 async function loadCSV() {
-  const text = await fetch(RAW_CSV_URL).then((r) => r.text());
-  const data = d3.csvParse(text);
-  return data;
+  const candidates = [
+    RELEASE_CSV_URL,
+    RAW_CSV_URL,
+    "../outputs/" + DATA_FILENAME,
+  ];
+  let lastErr;
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`fetch failed ${res.status}`);
+      const text = await res.text();
+      const data = d3.csvParse(text);
+      console.log(`Loaded main data from: ${url} (rows: ${data.length})`);
+      return data;
+    } catch (e) {
+      lastErr = e;
+      continue;
+    }
+  }
+  throw new Error("Failed to load CSV from any candidate URL: " + lastErr);
 }
 
 async function tryLoadClassification() {
-  // Attempt remote first, then fall back to repo-relative path
+  // Attempt Release first, then raw main, then repo-relative path
   const candidates = [
+    RELEASE_CLASS_URL,
     CLASS_CSV_URL,
     // Works when opening docs/index.html via a web server or GitHub Pages
-    "../outputs/sector_classification.csv",
+    "../outputs/" + CLASS_FILENAME,
   ];
   let lastErr;
   for (const url of candidates) {
