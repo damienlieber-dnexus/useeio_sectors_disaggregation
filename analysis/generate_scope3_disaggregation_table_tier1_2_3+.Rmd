@@ -46,7 +46,7 @@ The final outputs are an Excel workbook and a CSV, saved in the `outputs/` folde
 
 This block handles all setup, including package installation and dynamically fetching model specifications from the official USEPA repository based on the user's selected `sef_version`.
 
-```{r 01-setup-and-load-packages, echo=TRUE}
+```{r 01-setup-and-load-packages, echo=FALSE, message=FALSE, warning=FALSE}
 # --- 1. Package Management ---
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(
@@ -57,7 +57,8 @@ pacman::p_load(
   httr,       # For checking URLs before trying to read them
   openxlsx,   # For writing to Excel files
   stringr,    # For advanced string manipulation
-  tidyr       # For separate() function
+  tidyr,      # For separate() function
+  cli         # For concise, readable status messages
 )
 
 # --- 2. Load User Configuration ---
@@ -93,18 +94,18 @@ useeior_tag <- versioning_data[[config$sef_version]][["useeior_tag"]]
 useeior_ver <- versioning_data[[config$sef_version]][["useeior_ver"]]
 installed_pkg <- installed.packages()
 if (!"devtools"%in%installed_pkg[, "Package"]) {
-  install.packages("devtools")
+  suppressMessages(install.packages("devtools"))
 }
 if (!"useeior"%in%installed_pkg[, "Package"]) {
   cli::cli_alert_info("Installing useeior v{useeior_ver} (tag @{useeior_tag}) from GitHub...")
-  devtools::install_github(paste0("USEPA/useeior@", useeior_tag))
+  suppressMessages(devtools::install_github(paste0("USEPA/useeior@", useeior_tag), quiet = TRUE))
 }
 installed_useeior_ver <- installed_pkg[installed_pkg[, "Package"]=="useeior", "Version"]
 if ("useeior"%in%installed_pkg[, "Package"] && useeior_ver!=installed_useeior_ver) {
   cli::cli_alert_warning(c("A new version of useeior (v{useeior_ver}) will be installed for generating SEF {SEF_version}. ",
                            "The useeior v{installed_useeior_ver} you have installed will be overwritten."))
   cli::cli_alert_info("Installing useeior v{useeior_ver} (tag @{useeior_tag}) from GitHub...")
-  devtools::install_github(paste0("USEPA/useeior@", useeior_tag))
+  suppressMessages(devtools::install_github(paste0("USEPA/useeior@", useeior_tag), quiet = TRUE))
 }
 
 library(useeior)
@@ -116,7 +117,7 @@ cat("Setup complete. Ready to build the model.\n")
 
 Now, we build the USEEIO model using the `model_name` and the corresponding remote model specification file fetched in the previous step.
 
-```{r 02-build-model, cache=TRUE}
+```{r 02-build-model, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 # --- 1. Prepare for local model specification file ---
 spec_dir <- "spec_files"
 # Create the directory if it doesn't exist
@@ -136,7 +137,7 @@ if (!file.exists(local_spec_file)) {
     ".yml"
   )
 
-  cat("Downloading model specification file from:", model_spec_url, "\n")
+  cli::cli_alert_info("Downloading model specification file from: {model_spec_url}")
   response_spec <- GET(model_spec_url)
   
   # Stop with an error if the download fails
@@ -146,22 +147,24 @@ if (!file.exists(local_spec_file)) {
 
   # Write the downloaded content to the local file
   writeBin(content(response_spec, "raw"), local_spec_file)
-  cat("Model specification saved locally to:", local_spec_file, "\n")
+  cli::cli_alert_success("Model specification saved locally: {local_spec_file}")
 } else {
-  cat("Using existing local model specification file:", local_spec_file, "\n")
+  cli::cli_alert_info("Using existing local model specification: {local_spec_file}")
 }
 
 # --- 3. Build the model ---
 # We now use the LOCAL file path for the configpaths argument.
 # The `cache=TRUE` option will save time on subsequent runs.
+cli::cli_alert_info("Building USEEIO model: {model_name} (this can take a minute)...")
 model <- buildModel(model_name, configpaths = local_spec_file)
+cli::cli_alert_success("Model built.")
 ```
 
 ### Model Specifications
 
 It's important to record the key specifications of the model used for this analysis to ensure reproducibility.
 
-```{r 02a-model-specs}
+```{r 02a-model-specs, echo=FALSE}
 # Extract key specifications from the model object
 model_specs <- data.frame(
   Specification = c("USEEIO Supply Chain Emission Factors version", "Model Name", "Input-Output Model's Year", "GHG Data Year", "GHG Data File", "GHG Data File Location"),
@@ -183,7 +186,7 @@ knitr::kable(model_specs, caption = "Key USEEIO Model Specifications")
 
 This is the core of the analysis. We extract matrices from the model and partition them by scope *before* calculating the tier contributions.
 
-```{r 03-spd-calculation, echo=TRUE}
+```{r 03-spd-calculation, echo=FALSE, message=FALSE, warning=FALSE}
 # --- 1. Prepare Key Matrices ---
 # D: Direct Impact Matrix, diagonally expanded from the vector in model$D
 D_matrix <- diag(model$D[1, ])
@@ -249,7 +252,7 @@ N_Tier3plus <- N_Total - N_Tier1 - N_Tier2
 
 Let's verify that our decomposition is correct. The sum of the tiers should equal the total impact matrix.
 
-```{r 04-verification}
+```{r 04-verification, echo=FALSE, message=FALSE, warning=FALSE}
 N_Check <- colSums(N_Tier1 + N_Tier2 + N_Tier3plus)
 
 # Calculate the ratio of the summed tiers to the total impact for each commodity
@@ -271,7 +274,7 @@ if (!verification_passed) {
 
 Now we process the matrix results into the final tables and export them to a multi-tab Excel file.
 
-```{r 05-reshape-and-export, echo=TRUE}
+```{r 05-reshape-and-export, echo=FALSE, message=FALSE, warning=FALSE}
 # --- 1. Helper Function to Reshape Matrices ---
 melt_and_label <- function(matrix, tier_label, scope_label) {
   # Melt the matrix to long format with explicit row/col identifiers
@@ -306,9 +309,22 @@ df_t1_s2 <- melt_and_label(N_Tier1_scope2, "Tier 1", "Scope 2")
 df_t2_s1 <- melt_and_label(N_Tier2_scope1, "Tier 2", "Scope 1")
 
 # Decompose Tier 2 Scope 2 by intermediate supplier (j) while preserving electricity source (i)
-# M1 = D * A_scope2 gives i->j contributions; then distribute to k via A[j,k]
+#
+# Steps:
+# 1) Compute M1 = D * A_scope2 which gives contributions from GHG source i to intermediate
+#    supplier j (i -> j). This preserves the original electricity (or other Scope 2 source)
+#    in the row id `Embedded_Sector_Code_for_GHG_sources`.
+# 2) Expand M1 into long form as df_scope2_step1: (i, j, v1) where v1 is the contribution i->j.
+# 3) Expand the full A matrix into long form as df_A_jk: (j, k, a_jk) representing j->k flows.
+# 4) Join df_scope2_step1 with df_A_jk on j to distribute the i->j contribution across final
+#    embedded commodities k using multiplication v1 * a_jk. The result is attributed to the
+#    intermediate supplier j (Embedded_Sector_Code) while retaining the original GHG source i in
+#    Embedded_Sector_Code_for_GHG_sources. The product is the Tier 2 Scope 2 contributions.
+
+# M1: contributions from GHG source i to intermediate supplier j (i -> j)
 M1 <- D_matrix %*% A_matrix_scope2
 
+# Long form: (Embedded_Sector_Code_for_GHG_sources = i, Embedded_Sector_Code = j, v1)
 df_scope2_step1 <- reshape2::melt(
   M1,
   varnames = c("Embedded_Sector_Code_for_GHG_sources", "Embedded_Sector_Code"),
@@ -316,6 +332,7 @@ df_scope2_step1 <- reshape2::melt(
 ) %>%
   dplyr::filter(v1 != 0)
 
+# Long form of A: (Embedded_Sector_Code = j, Disaggregated_Commodity = k, a_jk)
 df_A_jk <- reshape2::melt(
   A_matrix,
   varnames = c("Embedded_Sector_Code", "Disaggregated_Commodity"),
@@ -323,6 +340,7 @@ df_A_jk <- reshape2::melt(
 ) %>%
   dplyr::filter(a_jk != 0)
 
+# Join on j to compute i -> j -> k contributions and label as Tier 2, Scope 2
 df_t2_s2 <- df_scope2_step1 %>%
   dplyr::inner_join(df_A_jk, by = "Embedded_Sector_Code") %>%
   dplyr::mutate(
@@ -339,7 +357,44 @@ df_t2_s2 <- df_scope2_step1 %>%
   ) %>%
   dplyr::filter(Absolute_Contribution_GHG != 0)
 df_t3plus_s1 <- melt_and_label(N_Tier3plus_scope1, "Tier 3+", "Scope 1")
-df_t3plus_s2 <- melt_and_label(N_Tier3plus_scope2, "Tier 3+", "Scope 2")
+
+# Decompose Tier 3+ Scope 2: attribute to intermediate supplier (j) beyond direct (A) paths
+#
+# Rationale:
+# - For Tier 3+ we want to capture contributions that travel through intermediate suppliers j
+#   to reach final embedded commodities k via paths of length >= 2 (i.e., beyond direct A).
+# - The matrix R2plus = L - I - A captures the Leontief contributions associated with all
+#   path lengths >= 2 from j to k. Multiplying the i->j contributions (v1) by r2plus gives
+#   the portion of the Scope 2 impact that passes through intermediate supplier j and reaches k
+#   through longer paths. This attributes Tier 3+ Scope 2 to the intermediate supplier j, while
+#   still preserving the original GHG source i in Embedded_Sector_Code_for_GHG_sources.
+
+# R2plus: captures contribution shares for paths of length >= 2 from j to k
+R2plus_matrix <- L_matrix - I_matrix - A_matrix
+
+df_R2plus_jk <- reshape2::melt(
+  R2plus_matrix,
+  varnames = c("Embedded_Sector_Code", "Disaggregated_Commodity"),
+  value.name = "r2plus"
+) %>%
+  dplyr::filter(r2plus != 0)
+
+# Multiply i->j (v1) by r2plus (j->k via paths length>=2) and label Tier 3+
+df_t3plus_s2 <- df_scope2_step1 %>%
+  dplyr::inner_join(df_R2plus_jk, by = "Embedded_Sector_Code") %>%
+  dplyr::mutate(
+    Absolute_Contribution_GHG = v1 * r2plus,
+    Tier = "Tier 3+",
+    Scope = "Scope 2"
+  ) %>%
+  dplyr::select(
+    Disaggregated_Commodity,
+    Embedded_Sector_Code,
+    Embedded_Sector_Code_for_GHG_sources,
+    Tier, Scope,
+    Absolute_Contribution_GHG
+  ) %>%
+  dplyr::filter(Absolute_Contribution_GHG != 0)
 
 # --- 3. Create the Main Contribution Table (by Code) ---
 # --- 6. Clean Codes Before Export ---
@@ -348,6 +403,9 @@ abs_col_name <- paste0(
   model$specs$IOYear,
   " spent on embedded commodity)"
 )
+## Clean scope-2 codes (remove any trailing /US) so we can filter them from Disaggregated_Commodity
+scope2_codes_clean <- stringr::str_replace(config$scope_2_sectors, "/US$", "")
+
 final_table_by_code <- bind_rows(
     df_t1_s1, df_t1_s2, df_t2_s1, df_t2_s2, df_t3plus_s1, df_t3plus_s2
   ) %>%
@@ -356,6 +414,8 @@ final_table_by_code <- bind_rows(
     Embedded_Sector_Code    = stringr::str_replace(Embedded_Sector_Code, "/US$", ""),
     Embedded_Sector_Code_for_GHG_sources = stringr::str_replace(Embedded_Sector_Code_for_GHG_sources, "/US$", "")
   ) %>%
+  # Filter out commodities that are themselves Scope 2 sectors as specified in config.yml
+  dplyr::filter(!(Disaggregated_Commodity %in% scope2_codes_clean)) %>%
   group_by(Disaggregated_Commodity) %>%
   mutate(
     Total_Commodity_GHG = sum(Absolute_Contribution_GHG),
