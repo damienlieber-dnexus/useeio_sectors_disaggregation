@@ -16,7 +16,7 @@ The main output is an Excel workbook and a CSV with absolute and relative contri
 
 ### Data tables
 
-Download files from the [release](https://github.com/DecarbNexus/useeio_sectors_disaggregation/releases) corresponding to a given version of USEEIO emission factors:
+Download files from the latest [release](https://github.com/DecarbNexus/useeio_sectors_disaggregation/releases) and select the file format that suits your needs:
 
 - **Excel** (all-in-one workbook): `outputs/SEF_<version>_disaggregation_factors_GHG<year>_IO<year>.xlsx`
   - Best for: Spreadsheet users, quick exploration, pivot tables
